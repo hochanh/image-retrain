@@ -540,8 +540,7 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
   else:
     # Retrieve all bottlenecks.
     for label_index, label_name in enumerate(image_lists.keys()):
-      for image_index, image_name in enumerate(
-          image_lists[label_name][category]):
+      for image_index, image_name in enumerate(image_lists[label_name][category]):
         image_name = get_image_path(image_lists, label_name, image_index,
                                     image_dir, category)
         bottleneck, error = get_or_create_bottleneck(
@@ -558,9 +557,9 @@ def get_random_cached_bottlenecks(sess, image_lists, how_many, category,
   return bottlenecks, ground_truths, filenames
 
 
-def get_random_distorted_bottlenecks(
-    sess, image_lists, how_many, category, image_dir, input_jpeg_tensor,
-    distorted_image, resized_input_tensor, bottleneck_tensor):
+def get_random_distorted_bottlenecks(sess, image_lists, how_many, category,
+                                     image_dir, input_jpeg_tensor, distorted_image,
+                                     resized_input_tensor, bottleneck_tensor):
   """Retrieves bottleneck values for training images, after distortions.
 
   If we're training with distortions like crops, scales, or flips, we have to
@@ -1121,8 +1120,7 @@ def main(_):
       # Store intermediate results
       intermediate_frequency = FLAGS.intermediate_store_frequency
 
-      if (intermediate_frequency > 0 and (i % intermediate_frequency == 0)
-          and i > 0):
+      if (intermediate_frequency > 0 and (i % intermediate_frequency == 0) and i > 0):
         # If we want to do an intermediate save, save a checkpoint of the train
         # graph, to restore into the eval graph.
         train_saver.save(sess, CHECKPOINT_NAME)
