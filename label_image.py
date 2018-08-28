@@ -21,6 +21,7 @@ import argparse
 
 import numpy as np
 import tensorflow as tf
+import os.path as path
 
 
 def load_graph(model_file):
@@ -42,25 +43,29 @@ def read_tensor_from_image_file(file_name,
                                 input_std=255):
   input_name = "file_reader"
   file_reader = tf.read_file(file_name, input_name)
+
   if file_name.endswith(".png"):
-    image_reader = tf.image.decode_png(
-        file_reader, channels=3, name="png_reader")
+    image_reader = tf.image.decode_png(file_reader, channels=3, name="png_reader")
   elif file_name.endswith(".gif"):
-    image_reader = tf.squeeze(
-        tf.image.decode_gif(file_reader, name="gif_reader"))
+    image_reader = tf.squeeze(tf.image.decode_gif(file_reader, name="gif_reader"))
   elif file_name.endswith(".bmp"):
     image_reader = tf.image.decode_bmp(file_reader, name="bmp_reader")
   else:
-    image_reader = tf.image.decode_jpeg(
-        file_reader, channels=3, name="jpeg_reader")
+    image_reader = tf.image.decode_jpeg(file_reader, channels=3, name="jpeg_reader",
+                                        try_recover_truncated=True)
+
   float_caster = tf.cast(image_reader, tf.float32)
   dims_expander = tf.expand_dims(float_caster, 0)
   resized = tf.image.resize_bilinear(dims_expander, [input_height, input_width])
   normalized = tf.divide(tf.subtract(resized, [input_mean]), [input_std])
-  sess = tf.Session()
-  result = sess.run(normalized)
 
-  return result
+  sess = tf.Session()
+  try:
+    result = sess.run(normalized)
+  except Exception as e:
+    return None, e
+
+  return result, None
 
 
 def load_labels(label_file):
@@ -81,9 +86,12 @@ if __name__ == "__main__":
   input_std = 255
   input_layer = "input"
   output_layer = "InceptionV3/Predictions/Reshape_1"
+  result_file = "tf_files/result.csv"
 
   parser = argparse.ArgumentParser()
+  parser.add_argument("--image_dir", help="image folder to be processed")
   parser.add_argument("--image", help="image to be processed")
+  parser.add_argument("--result", help="result file")
   parser.add_argument("--graph", help="graph/model to be executed")
   parser.add_argument("--labels", help="name of file containing labels")
   parser.add_argument("--input_height", type=int, help="input height")
@@ -96,8 +104,15 @@ if __name__ == "__main__":
 
   if args.graph:
     model_file = args.graph
-  if args.image:
-    file_name = args.image
+
+  # Only image_folder or image is used
+  if args.image_dir:
+    image_files = tf.gfile.Glob(args.image_dir + '*.jpg')
+  elif args.image:
+    image_files = [args.image]
+
+  if args.result:
+    result_file = args.result
   if args.labels:
     label_file = args.labels
   if args.input_height:
@@ -114,25 +129,32 @@ if __name__ == "__main__":
     output_layer = args.output_layer
 
   graph = load_graph(model_file)
-  t = read_tensor_from_image_file(
-      file_name,
-      input_height=input_height,
-      input_width=input_width,
-      input_mean=input_mean,
-      input_std=input_std)
 
   input_name = "import/" + input_layer
   output_name = "import/" + output_layer
   input_operation = graph.get_operation_by_name(input_name)
   output_operation = graph.get_operation_by_name(output_name)
-
-  with tf.Session(graph=graph) as sess:
-    results = sess.run(output_operation.outputs[0], {
-        input_operation.outputs[0]: t
-    })
-  results = np.squeeze(results)
-
-  top_k = results.argsort()[-5:][::-1]
   labels = load_labels(label_file)
-  for i in top_k:
-    print(labels[i], results[i])
+
+  with tf.Session(graph=graph) as sess, open(result_file, 'w') as g:
+    g.write('id,predicted\n')
+    for file_name in image_files:
+      print("Predict", file_name)
+      t, err = read_tensor_from_image_file(
+          file_name,
+          input_height=input_height,
+          input_width=input_width,
+          input_mean=input_mean,
+          input_std=input_std)
+
+      if err is not None:
+        continue
+
+      results = sess.run(output_operation.outputs[0], {
+          input_operation.outputs[0]: t
+      })
+      results = np.squeeze(results)
+      top_k = results.argsort()[-5:][::-1]
+      id = path.splitext(path.basename(file_name))[0]
+      predicted = ' '.join(labels[i] for i in top_k[:3])
+      g.write("{},{}\n".format(id, predicted))

@@ -4,4 +4,4 @@ python label_image.py \
     --labels=tf_files/retrained_labels.txt \
     --input_layer=Placeholder \
     --output_layer=final_result \
-    --image=$1
+    --image_dir=$1
