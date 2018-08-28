@@ -6,4 +6,5 @@ python retrain.py \
   --output_graph=tf_files/retrained_graph.pb \
   --output_labels=tf_files/retrained_labels.txt \
   --architecture="${ARCHITECTURE}" \
+  --tfhub_module=https://tfhub.dev/google/imagenet/pnasnet_large/classification/2 \
   --image_dir=$1

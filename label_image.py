@@ -44,8 +44,8 @@ def find_img_ex(img_path):
   return imghdr.what(img_path) or 'jpeg'
 
 
-def read_tensor_from_image_file(input_height=299,
-                                input_width=299,
+def read_tensor_from_image_file(input_height=480,
+                                input_width=480,
                                 input_mean=0,
                                 input_std=255):
   input_name = "file_reader"
@@ -79,8 +79,8 @@ if __name__ == "__main__":
   file_name = "tensorflow/examples/label_image/data/grace_hopper.jpg"
   model_file = "tensorflow/examples/label_image/data/inception_v3_2016_08_28_frozen.pb"
   label_file = "tensorflow/examples/label_image/data/imagenet_slim_labels.txt"
-  input_height = 299
-  input_width = 299
+  input_height = 480
+  input_width = 480
   input_mean = 0
   input_std = 255
   input_layer = "input"
