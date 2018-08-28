@@ -20,6 +20,7 @@ from __future__ import print_function
 import argparse
 
 import numpy as np
+import imghdr
 import tensorflow as tf
 import os.path as path
 
@@ -36,36 +37,34 @@ def load_graph(model_file):
   return graph
 
 
-def read_tensor_from_image_file(file_name,
-                                input_height=299,
+def find_img_ex(img_path):
+  """
+  Always return a string
+  """
+  return imghdr.what(img_path) or 'jpeg'
+
+
+def read_tensor_from_image_file(input_height=299,
                                 input_width=299,
                                 input_mean=0,
                                 input_std=255):
   input_name = "file_reader"
+  file_name = tf.placeholder("string", name="fname")
   file_reader = tf.read_file(file_name, input_name)
+  file_type = tf.py_func(find_img_ex, [file_name], "string", False)
 
-  if file_name.endswith(".png"):
-    image_reader = tf.image.decode_png(file_reader, channels=3, name="png_reader")
-  elif file_name.endswith(".gif"):
-    image_reader = tf.squeeze(tf.image.decode_gif(file_reader, name="gif_reader"))
-  elif file_name.endswith(".bmp"):
-    image_reader = tf.image.decode_bmp(file_reader, name="bmp_reader")
-  else:
-    image_reader = tf.image.decode_jpeg(file_reader, channels=3, name="jpeg_reader",
-                                        try_recover_truncated=True)
+  image_reader = tf.case({
+      tf.equal(file_type, 'jpeg'): lambda: tf.image.decode_jpeg(file_reader, channels=3, name="jpeg_reader"),
+      tf.equal(file_type, 'png'): lambda: tf.image.decode_png(file_reader, channels=3, name="png_reader"),
+      tf.equal(file_type, 'gif'): lambda: tf.squeeze(tf.image.decode_gif(file_reader, name="gif_reader")),
+      tf.equal(file_type, 'bmp'): lambda: tf.image.decode_bmp(file_reader, channels=3, name="bmp_reader"),
+  }, default=lambda: tf.image.decode_image(file_reader, channels=3, name="image_reader"))
 
   float_caster = tf.cast(image_reader, tf.float32)
   dims_expander = tf.expand_dims(float_caster, 0)
   resized = tf.image.resize_bilinear(dims_expander, [input_height, input_width])
   normalized = tf.divide(tf.subtract(resized, [input_mean]), [input_std])
-
-  sess = tf.Session()
-  try:
-    result = sess.run(normalized)
-  except Exception as e:
-    return None, e
-
-  return result, None
+  return normalized
 
 
 def load_labels(label_file):
@@ -138,18 +137,16 @@ if __name__ == "__main__":
 
   with tf.Session(graph=graph) as sess, open(result_file, 'w') as g:
     g.write('id,predicted\n')
+    read_tensor_from_image_file_op = read_tensor_from_image_file(
+        input_height=input_height,
+        input_width=input_width,
+        input_mean=input_mean,
+        input_std=input_std,
+    )
+    count = 0
     for file_name in image_files:
-      print("Predict", file_name)
-      t, err = read_tensor_from_image_file(
-          file_name,
-          input_height=input_height,
-          input_width=input_width,
-          input_mean=input_mean,
-          input_std=input_std)
-
-      if err is not None:
-        continue
-
+      print(file_name)
+      t = sess.run(read_tensor_from_image_file_op, feed_dict={"fname:0": file_name})
       results = sess.run(output_operation.outputs[0], {
           input_operation.outputs[0]: t
       })
@@ -158,3 +155,7 @@ if __name__ == "__main__":
       id = path.splitext(path.basename(file_name))[0]
       predicted = ' '.join(labels[i] for i in top_k[:3])
       g.write("{},{}\n".format(id, predicted))
+
+      count += 1
+      if count % 100 == 0:
+        print("Predicted {} images".format(count))
