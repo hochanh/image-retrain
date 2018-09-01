@@ -6,5 +6,5 @@ python label_image.py \
     --input_height=224 \
     --input_width=224 \
     --output_layer=final_result \
-    --image_dir=/data/ \
-    --result=/result/submission.csv
+    --image_dir=${1-/data/} \
+    --result=${2-/result/submission.csv}

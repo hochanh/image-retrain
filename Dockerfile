@@ -7,5 +7,3 @@ ADD . /model/
 RUN pip install tensorflow-hub
 
 VOLUME ["/data", "/result"]
-
-CMD ["/model/predict.sh"]
