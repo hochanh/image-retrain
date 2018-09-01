@@ -1,1 +1,2 @@
-tf_files/
+*.pyc
+*.csv

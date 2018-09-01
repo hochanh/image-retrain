@@ -1,19 +1,15 @@
-Adapt from https://www.tensorflow.org/hub/tutorials/image_retraining
+Adapted from https://www.tensorflow.org/hub/tutorials/image_retraining
 
-## Setup
-
-```
-pip install tensorflow tensorflow_hub
-```
-
-## Train
+## Build
 
 ```
-./start_training.sh /your/train/folder/
+make
 ```
 
-## Label
+## Predict
 
 ```
-./start_labeling.sh /your/test/folder/
+docker run -v /your/images/:/data -v $(pwd):/result landmark /bin/bash /model/predict.sh
 ```
+
+You will get your `submission.csv` in your current folder.

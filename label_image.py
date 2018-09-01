@@ -76,7 +76,7 @@ def load_labels(label_file):
 
 
 if __name__ == "__main__":
-  file_name = "tensorflow/examples/label_image/data/grace_hopper.jpg"
+  image_dir = "/data"
   model_file = "tensorflow/examples/label_image/data/inception_v3_2016_08_28_frozen.pb"
   label_file = "tensorflow/examples/label_image/data/imagenet_slim_labels.txt"
   input_height = 480
@@ -85,11 +85,10 @@ if __name__ == "__main__":
   input_std = 255
   input_layer = "input"
   output_layer = "InceptionV3/Predictions/Reshape_1"
-  result_file = "tf_files/result.csv"
+  result_file = "/result/result.csv"
 
   parser = argparse.ArgumentParser()
   parser.add_argument("--image_dir", help="image folder to be processed")
-  parser.add_argument("--image", help="image to be processed")
   parser.add_argument("--result", help="result file")
   parser.add_argument("--graph", help="graph/model to be executed")
   parser.add_argument("--labels", help="name of file containing labels")
@@ -103,13 +102,9 @@ if __name__ == "__main__":
 
   if args.graph:
     model_file = args.graph
-
-  # Only image_folder or image is used
   if args.image_dir:
+    image_dir = args.image_dir
     image_files = tf.gfile.Glob(args.image_dir + '*.jpg')
-  elif args.image:
-    image_files = [args.image]
-
   if args.result:
     result_file = args.result
   if args.labels:
@@ -135,6 +130,7 @@ if __name__ == "__main__":
   output_operation = graph.get_operation_by_name(output_name)
   labels = load_labels(label_file)
 
+  print("Will do predict for {} images in {}".format(len(image_files), image_dir))
   with tf.Session(graph=graph) as sess, open(result_file, 'w') as g:
     g.write('id,predicted\n')
     read_tensor_from_image_file_op = read_tensor_from_image_file(
